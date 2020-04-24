@@ -1,21 +1,26 @@
 import pandas as pd
 import numpy as np
 
-#TODO : Multiple criterias
-#TODO : Multiple groups
-#TODO : Custom metrics
-#TODO : different metrics ?
-#TODO : Exact solution
-#TODO : Handle categorical data
-def create_groups(data, criteria, n_groups = 2,n_iter=100):
+#TODO Multiple criterias
+#TODO Multiple groups
+#TODO Custom metrics
+#TODO different metrics ?
+#TODO Exact solution
+#TODO Handle categorical data
+#TODO Write unit tests
+
+def create_groups(data : pd.DataFrame, criteria : str, n_groups : int = 2, n_iter : int = 100) -> pd.DataFrame:
     if criteria not in data.columns.values:
         raise ValueError("Column not found in dataframe")
     else:
         diff_scores = list()
         for i in range(n_iter):
-            data['subset'] = np.random.choice([0,1], size=len(data))
+            data['subset'] = np.random.choice([i for i in range(n_groups)], size=len(data))
             try:
-                diff_scores.append(np.abs(data.loc[data.subset == 0][criteria].mean() - data.loc[data.subset == 1][criteria].mean()))
+                group_values = sorted(data.groupby(['subset'])[criteria].mean().values)
+                #We keep the biggest difference between 2 groups as the treshold
+                diff_scores.append(np.abs(group_values[0] - group_values[-1]))
+                print(np.abs(group_values[0] - group_values[-1]))
             except TypeError as e:
                 raise ValueError('The metric could not be computed using the column values, is the data numeric ?')
             if len(diff_scores) == 1:
