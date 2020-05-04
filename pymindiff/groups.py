@@ -1,4 +1,5 @@
 import pandas as pd
+from math import ceil
 import numpy as np
 from pymindiff.scale import MinMaxScaler
 
@@ -36,8 +37,8 @@ def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : 
             scaler = MinMaxScaler()
             data[criteria] = scaler.fit_transform(data[criteria].copy())
         for i in range(n_iter):
-            #FIX so that groups are as equal in size as possible
-            data['subset'] = np.random.choice([i for i in range(n_groups)], size=len(data))
+            draw_groups = ([i for i in range(n_groups)] * (ceil(len(data) / n_groups)))[:len(data)]
+            data['subset'] = np.random.choice(draw_groups, size=len(data), replace=False)
             total_diff = 0
             #Check that the tolerance is met for nominal criterias, if not go to next iteration
             if is_nominal_tolerance_met(data, criteria_nominal, nominal_tolerance):
@@ -65,6 +66,7 @@ def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : 
             data[criteria] = scaler.inverse_transform(data[criteria].copy())
     if 'groups' not in data.columns.values:
         print("No grouping found, probably because of a low tolerance on nominal criterias")
+        #TODO Delete the subset column even if a result is found
         data = data.drop(columns=['subset'])
     print(diff_scores)
     return data
