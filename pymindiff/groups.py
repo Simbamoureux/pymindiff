@@ -1,13 +1,15 @@
 import pandas as pd
 from math import ceil
+from itertools import permutations
 import numpy as np
 from pymindiff.scale import MinMaxScaler
+from pymindiff.partitions import set_partitions, get_groups_column_from_partitions
 
 
 #TODO Address the problem of metrics weighting more in the sum than others
-#TODO Exact solution
 #TODO Add the possibility to pass data that already had been optimized to optimize again and try to find better groups
 #TODO Write unit tests
+#TODO Use partitions of same-ish length to find exact solution too ?
 #TODO Write README
 #TODO Write docs
 #TODO Work on performance
@@ -26,19 +28,28 @@ def is_nominal_tolerance_met(data : pd.DataFrame, criteria_nominal : list = [], 
         return True
 
 
-def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : list = [], nominal_tolerance : list = [], n_groups : int = 2, n_iter : int = 100, equalize=[np.mean], scale=False) -> pd.DataFrame: 
+def get_permutations(data_length, n_groups, n_iter, exact):
+    draw_groups = ([i for i in range(n_groups)] * (ceil(data_length / n_groups)))[:data_length]
+    if exact:
+        partitions = [elem for elem in set_partitions([i for i in range(data_length)], n_groups)]
+        return get_groups_column_from_partitions(partitions, data_length)
+    else:
+        return [np.random.choice(draw_groups, size=data_length, replace=False) for i in range(n_iter)]
+
+
+def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : list = [], nominal_tolerance : list = [], n_groups : int = 2, n_iter : int = 100, equalize=[np.mean], scale=False, exact=False) -> pd.DataFrame: 
     assert len(criteria) > 0 or len(criteria_nominal) > 0, "No critera passed !"
     assert len(criteria_nominal) == len(nominal_tolerance), "Not enough or too many tolerances, please pass as many tolerance values as there are nominal criterias to consider"
     if any(column not in data.columns.values for column in criteria + criteria_nominal):
         raise ValueError("At least one column was not found in the dataframe")
     else:
+        permutations_to_consider = get_permutations(len(data), n_groups, n_iter, exact)
         diff_scores = list()
         if scale:
             scaler = MinMaxScaler()
             data[criteria] = scaler.fit_transform(data[criteria].copy())
-        for i in range(n_iter):
-            draw_groups = ([i for i in range(n_groups)] * (ceil(len(data) / n_groups)))[:len(data)]
-            data['subset'] = np.random.choice(draw_groups, size=len(data), replace=False)
+        for permutation in permutations_to_consider:
+            data['subset'] = permutation
             total_diff = 0
             #Check that the tolerance is met for nominal criterias, if not go to next iteration
             if is_nominal_tolerance_met(data, criteria_nominal, nominal_tolerance):
