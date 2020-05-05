@@ -37,7 +37,7 @@ def get_permutations(data_length, n_groups, n_iter, exact):
         return [np.random.choice(draw_groups, size=data_length, replace=False) for i in range(n_iter)]
 
 
-def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : list = [], nominal_tolerance : list = [], n_groups : int = 2, n_iter : int = 100, equalize=[np.mean], scale=False, exact=False) -> pd.DataFrame: 
+def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : list = [], nominal_tolerance : list = [], n_groups : int = 2, n_iter : int = 100, equalize=[np.mean], scale=False, exact=False, verbose=False) -> pd.DataFrame: 
     assert len(criteria) > 0 or len(criteria_nominal) > 0, "No critera passed !"
     assert len(criteria_nominal) == len(nominal_tolerance), "Not enough or too many tolerances, please pass as many tolerance values as there are nominal criterias to consider"
     if any(column not in data.columns.values for column in criteria + criteria_nominal):
@@ -79,5 +79,6 @@ def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : 
         print("No grouping found, probably because of a low tolerance on nominal criterias")
         #TODO Delete the subset column even if a result is found
         data = data.drop(columns=['subset'])
-    print(diff_scores)
+    if verbose:
+        print(diff_scores)
     return data
