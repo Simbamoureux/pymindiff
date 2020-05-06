@@ -104,10 +104,8 @@ def get_total_diff(data, criteria, equalize):
     """
     total_diff = 0
     if len(criteria) == 0:
-        #FIXME Wrong return value
         #If there are only nominal criterias to minimize, return the first grouping below tolerance
-        data['groups'] = data['subset']
-        return data
+        return 0
     for metric in equalize:
         sum_of_columns_diff = 0
         group_values = data.groupby(['subset'])[criteria].apply(metric)
@@ -193,11 +191,15 @@ def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : 
                     if min_diff > min(diff_scores):
                         min_diff = min(diff_scores)
                         data['groups'] = data['subset']
+                #Best possible value found
+                if min_diff == 0:
+                    break
         if scale:
             data[criteria] = scaler.inverse_transform(data[criteria].copy())
+    data = data.drop(columns=['subset'])
     if 'groups' not in data.columns.values:
         print("No grouping found, probably because of a low tolerance on nominal criterias")
-    data = data.drop(columns=['subset'])
+        return data
     if verbose:
         print(diff_scores)
         print(min(diff_scores))
