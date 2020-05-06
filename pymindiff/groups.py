@@ -7,7 +7,6 @@ from pymindiff.partitions import set_partitions, get_groups_column_from_partitio
 
 
 #TODO Address the problem of metrics weighting more in the sum than others
-#TODO Add the possibility to pass data that already had been optimized to optimize again and try to find better groups
 #TODO Write unit tests
 #TODO Use partitions of same-ish length to find exact solution too ?
 #TODO Write README
