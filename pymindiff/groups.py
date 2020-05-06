@@ -10,12 +10,32 @@ from pymindiff.partitions import set_partitions, get_groups_column_from_partitio
 #TODO Write unit tests
 #TODO Use partitions of same-ish length to find exact solution too ?
 #TODO Write README
-#TODO Write docs
 #TODO Work on performance
 #TODO Don't rely on pandas ?
 #TODO integrate to Pypi
 
 def is_nominal_tolerance_met(data : pd.DataFrame, criteria_nominal : list = [], nominal_tolerance : list = []):
+    """
+    Checks that the tolerances for categorical columns are met. The tolerance is defined as the sum of the maximum frequency deviation 
+    between groups for each categorical column passed in criteria_nominal.
+
+    Parameters
+    ----------
+    data : pd.DataFrame 
+        Input data
+        
+    criteria_nominal : list(str)
+        Names of the columns to use for minimizing differences between groups. Those columns must be categorical.
+
+    nominal_tolerance : list(int)
+        Maximum accepted frequency deviation between groups for categorical columns. Must be the same length as criteria_nominal and
+        passed in the same order as the column names.
+
+    Returns
+    -------
+    bool
+        Wether the grouping satisfies the tolerance for categorical variables
+    """
     if len(criteria_nominal) == 0:
         return True
     else:
@@ -28,6 +48,31 @@ def is_nominal_tolerance_met(data : pd.DataFrame, criteria_nominal : list = [], 
 
 
 def get_permutations(data_length, n_groups, n_iter, exact):
+    """
+    Computes the group configurations to be considered
+
+    Parameters
+    ----------
+    data_length : int 
+        Length of the input data (rows)
+        
+    n_groups : int
+        Number of groups to create
+    
+    n_iter : int
+        Number of iterations. Each iteration tests a random group assignment and computes the difference between groups regarding the specified columns/metrics.
+        This argument is not used if exact is True
+
+    exact : bool
+        If true, n_iter will be ignored and every possible group configuration will be tested.
+        WARNING : The number of possible group configuration grows exponentially with the number of rows and groups.
+            Use only if the number of observations/groups is low
+
+    Returns
+    -------
+    bool
+        Wether the grouping satisfies the tolerance for categorical variables
+    """
     draw_groups = ([i for i in range(n_groups)] * (ceil(data_length / n_groups)))[:data_length]
     if exact:
         partitions = [elem for elem in set_partitions([i for i in range(data_length)], n_groups)]
@@ -37,8 +82,29 @@ def get_permutations(data_length, n_groups, n_iter, exact):
 
 
 def get_total_diff(data, criteria, equalize):
+    """
+    Computes the total difference between groups for the continuous criterias specified and functions to equalize.
+    The total difference is definded as the sum of the largest differences between 2 groups for each metric and criteria.
+
+    data : pd.DataFrame
+        Input data
+
+    criteria : list
+        Names of the columns to use for minimizing the metric values between groups. Those columns must be continuous. For categorical columns,
+        see the "criteria_nominal" argument. 
+
+    equalize : list
+        List of functions to equalize between groups. These functions must accept arrays/pd.Series as input and
+        return a numerical value.
+
+    Returns
+    -------
+    total_diff : float
+        Total difference between groups for this group configuration
+    """
     total_diff = 0
     if len(criteria) == 0:
+        #FIXME Wrong return value
         #If there are only nominal criterias to minimize, return the first grouping below tolerance
         data['groups'] = data['subset']
         return data
@@ -53,7 +119,54 @@ def get_total_diff(data, criteria, equalize):
     return total_diff
 
 
-def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : list = [], nominal_tolerance : list = [], n_groups : int = 2, n_iter : int = 100, equalize=[np.mean], scale=False, exact=False, verbose=False) -> pd.DataFrame: 
+def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : list = [], nominal_tolerance : list = [], n_groups : int = 2, n_iter : int = 100, equalize=[np.mean], scale=False, exact=False, verbose=False) -> pd.DataFrame:
+    """
+    Creates groups having minimal differences using a random sampling approach
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        Input data, must contain all columns cited in criteria and/or criteria_nominal. If data contains a column named "groups", 
+        the function will use this column as a baseline to try to improve on. The "groups" column is a vector of integers indicating
+        the group number of each observation (row).
+
+    criteria : list
+        Names of the columns to use for minimizing the metric values between groups. Those columns must be continuous. For categorical columns,
+        see the "criteria_nominal" argument. 
+
+    criteria_nominal : list(str)
+        Names of the columns to use for minimizing differences between groups. Those columns must be categorical.
+
+    nominal_tolerance : list(int)
+        Maximum accepted frequency deviation between groups for categorical columns. Must be the same length as criteria_nominal and
+        passed in the same order as the column names.
+
+    n_groups : int
+        Number of groups to create
+    
+    n_iter : int
+        Number of iterations. Each iteration tests a random group assignment and computes the difference between groups regarding the specified columns/metrics.
+        This argument is not used if exact is True
+
+    equalize : list
+        List of functions to equalize between groups. These functions must accept arrays/pd.Series as input and return a numerical value.
+
+    scale : bool
+        If true, the input numerical columns will be scaled in a Min-Max fashion.
+
+    exact : bool
+        If true, n_iter will be ignored and every possible group configuration will be tested.
+        WARNING : The number of possible group configuration grows exponentially with the number of rows and groups.
+            Use only if the number of observations/groups is low
+
+    verbose : bool
+        If true, enable verbose mode
+
+    Returns
+    -------
+    pd.DataFrame
+        The input dataframe with an additional column named "groups" containing the group number of each observation (row)
+    """ 
     assert len(criteria) > 0 or len(criteria_nominal) > 0, "No critera passed !"
     assert len(criteria_nominal) == len(nominal_tolerance), "Not enough or too many tolerances, please pass as many tolerance values as there are nominal criterias to consider"
     if any(column not in data.columns.values for column in criteria + criteria_nominal):
@@ -64,7 +177,7 @@ def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : 
         if scale:
             scaler = MinMaxScaler()
             data[criteria] = scaler.fit_transform(data[criteria].copy())
-        #Groups already exist -> Try to improve diff
+        #Groups already exists -> Try to improve diff score
         if 'groups' in data.columns.values:
             diff_scores.append(get_total_diff(data, criteria, equalize))
             min_diff = diff_scores[0]
@@ -84,8 +197,7 @@ def create_groups(data : pd.DataFrame, criteria : list = [], criteria_nominal : 
             data[criteria] = scaler.inverse_transform(data[criteria].copy())
     if 'groups' not in data.columns.values:
         print("No grouping found, probably because of a low tolerance on nominal criterias")
-        #TODO Delete the subset column even if a result is found
-        data = data.drop(columns=['subset'])
+    data = data.drop(columns=['subset'])
     if verbose:
         print(diff_scores)
         print(min(diff_scores))

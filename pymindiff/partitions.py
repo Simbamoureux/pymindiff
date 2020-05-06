@@ -54,7 +54,23 @@ def set_partitions(iterable, k=None):
         yield from set_partitions_helper(L, k)
 
 
-def get_groups_column_from_partitions(partitions, data_length):
+def get_groups_column_from_partitions(partitions, data_length):  
+    """
+    Transforms the partitions returned by set_partitions into vectors containing the group numbers
+
+    Parameters
+    ----------
+    partitions : list 
+        list of partition values returned by the set_partitions function
+        
+    data_length : int
+        Number of lines in the input dataframe
+
+    Returns
+    -------
+    list
+        A list containing all the groups column values corresponding to each partition
+    """
     permutations_values = [[i for i in range(data_length)] for elem in partitions]
     for i in range(len(partitions)):
         for j in permutations_values[i]:
