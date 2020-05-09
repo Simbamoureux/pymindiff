@@ -6,13 +6,11 @@ from pymindiff.scale import MinMaxScaler
 from pymindiff.partitions import set_partitions, get_groups_column_from_partitions
 
 
-#TODO Address the problem of metrics weighting more in the sum than others
 #TODO Write unit tests
-#TODO Use partitions of same-ish length to find exact solution too ?
-#TODO Write README
 #TODO Work on performance
 #TODO Don't rely on pandas ?
 #TODO integrate to Pypi
+#TODO Handle missing data
 
 def is_nominal_tolerance_met(data : pd.DataFrame, criteria_nominal : list = [], nominal_tolerance : list = []):
     """
