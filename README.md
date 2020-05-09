@@ -8,6 +8,10 @@ This package is inspired (but not a direct portage !) by the equivalent package 
 
 ## Installation
 
+From the Pypi repository : `pip install pymindiff`
+
+Or directly by cloning this repo : https://github.com/Simbamoureux/pymindiff
+
 ## Usage
 
 ``` 
