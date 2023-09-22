@@ -106,7 +106,7 @@ def get_total_diff(data, criteria, equalize):
         return 0
     for metric in equalize:
         sum_of_columns_diff = 0
-        group_values = data.groupby(['subset'])[criteria].apply(metric)
+        group_values = data.groupby(['subset'])[criteria].agg(metric)
         for column in criteria:
             largest_diff = max(group_values[column]) - min(group_values[column])
             sum_of_columns_diff += largest_diff
